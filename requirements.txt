@@ -1,7 +1,5 @@
 aiohttp==3.7.3
 Jinja2~=3.0.1
 psycopg2==2.9.1
-pony~=0.7.14
 structlog~=21.1.0
-elastic-apm~=6.3.3
 tortoise~=0.1.1

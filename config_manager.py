@@ -17,7 +17,7 @@ class Config(object):
         return self.parser.getint(self.section, param_name, fallback=None)
 
     def _get_boolean_param(self, param_name):
-        return self.parser.getboolean(self.section, param_name, fallback=None)
+        return self.parser.get(self.section, param_name).lower() == 'true'
 
 
 class DefaultConfig(Config):
@@ -38,12 +38,6 @@ class DBConnectionConfig(Config):
         self.database = self._get_param('database')
 
 
-class ApmConfig(Config):
-    def __init__(self, section, parser):
-        super().__init__(section, parser)
-        self.server_url = self._get_param('server_url')
-
-
 class LoggingConfig(Config):
     def __init__(self, section, parser):
         super().__init__(section, parser)
@@ -61,7 +55,3 @@ _parser.read(_app_config_path)
 default_config = DefaultConfig('DEFAULT', _parser)
 db_connection_config = DBConnectionConfig('DB_CONNECTION', _parser)
 log_config = LoggingConfig('LOGGING', _parser)
-try:
-    apm_config = ApmConfig('APM', _parser)
-except NoSectionError:
-    apm_config = None

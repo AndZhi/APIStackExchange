@@ -1,29 +1,21 @@
-from pony.orm import db_session, flush
 from repository.base_repository import BaseRepository
 from app.models.models import Tag
 
 
 class TagRepository(BaseRepository):
     @staticmethod
-    def insert(tag: Tag):
+    async def insert(tag: Tag):
         if tag.id is None:
-            with db_session:
-                tag
-                flush()
-                return tag.id
+            await tag.save()
 
     @staticmethod
-    def update(tag: Tag):
-        if tag.id is not None:
-            with db_session:
-                tag
+    async def update(tag: Tag):
+        pass
 
     @staticmethod
-    def select(tag_id: int):
-        return Tag.get(id=tag_id)
+    async def select(tag_id: int):
+        pass
 
     @staticmethod
-    def delete(tag_id: int,):
-        with db_session:
-            tag = Tag.get(id=tag_id)
-            tag.delete()
+    async def delete(tag_id: int):
+        pass
