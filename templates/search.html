@@ -1,0 +1,49 @@
+<head><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search.</title>
+<style>
+    .board {
+        margin-top: 5%;
+        margin-bottom: 5%;
+        margin-left: 5%;
+        margin-right: 5%;
+        padding-top: 5%;
+        padding-bottom: 5%;
+        padding-left: 5%;
+        padding-right: 5%;
+    }
+    .box div{
+        display: inline-block;
+        margin-bottom: 5%;
+        margin-right: 1px;
+    }
+</style>
+</head>
+<body>
+<div class="board">
+    <form id="search_form" action="/response">
+    <div class="box">
+        <div>Новый запрос</div>
+
+                    <div>
+                        <input name="search" type="text" size="30">
+                    </div>
+                    <div>
+                            <button>Search</button>
+                    </div>
+
+        <div>Показать</div>
+        <div>
+            <select id="line_quantity" name="line_quantity" required>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+    </div>
+        </form>
+</div>
+</body>
+</html>
