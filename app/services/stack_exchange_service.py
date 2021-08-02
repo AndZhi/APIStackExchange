@@ -1,10 +1,28 @@
 import json
 from datetime import datetime
+from datetime import timedelta
 from types import SimpleNamespace
-from app.search import client
-from repository import request_repository, owner_repository, item_repository, tag_repository
+import pytz
+
+import aioredis
+
 from app.models.models import Request, Item, Owner, Tag, Response
+from app.search import client
+from config_manager import redis_config
 from logger import logger
+from repository import request_repository, owner_repository, item_repository, tag_repository
+
+
+def init_redis():
+    global red
+    red = aioredis.Redis(host=redis_config.host,
+                         port=redis_config.port,
+                         db=redis_config.db,
+                         password=redis_config.password,
+                         socket_timeout=redis_config.socket_timeout)
+
+
+init_redis()
 
 
 async def get_requests(**kwargs):
@@ -12,32 +30,66 @@ async def get_requests(**kwargs):
 
 
 async def search(**kwargs):
-    search_string = kwargs['search_string']
+    search_string = kwargs['search_string'].lower()
+    line_quantity = int(kwargs['line_quantity'])
     logger.info(f'search_string: {search_string}')
+    response = []
     try:
-        data_json = await client.search(search_string)
+        if await red.exists(search_string) == 1:
+            data = _get_temp_object(json.loads(await red.get(search_string)))
+            response = _get_response(data)
     except Exception as e:
         logger.error(e)
+    if len(response) != 0:
+        return response[:line_quantity]
+
+    data_json = await client.search(search_string)
+    await red.setex(search_string.lower(),
+                    timedelta(minutes=redis_config.ttl_timeout),
+                    json.dumps(data_json))
+    temp_object = None
     try:
-        temp_object = json.loads(json.dumps(data_json), object_hook=lambda d: SimpleNamespace(**d))
+        temp_object = _get_temp_object(data_json)
     except Exception as e:
         logger.error(e)
+    request = None
     try:
         request = await _check_request(search_string)
         if request is not None:
             await _update_request(request, temp_object)
         else:
-            request = Request(request_string=search_string.lower(), date=datetime.now())
+            request = Request(request_string=search_string.lower(), date=datetime.now(pytz.utc))
             await request_repository.RequestRepository.insert(request)
             for i in temp_object.items:
                 await _create_item(request, i)
+        logger.info('Данные получены и записаны в базу.')
     except Exception as e:
         logger.error(e)
     try:
-        response = await _get_search_response(request.id, int(kwargs['line_quantity']))
+        response = await _get_response_from_db(request.id, line_quantity)
     except Exception as e:
         logger.error(e)
-    return response[:int(kwargs['line_quantity'])]
+
+    if len(response) != 0:
+        return response[:line_quantity]
+
+
+def _get_response(data):
+    response = []
+    date = None
+    for i in data.items:
+        if isinstance(i.creation_date, int):
+            date = datetime.utcfromtimestamp(i.creation_date).strftime('%d/%m/%Y-%H:%M:%S')
+        if isinstance(i.creation_date, datetime):
+            date = i.creation_date.strftime('%d/%m/%Y-%H:%M:%S')
+        response.append(Response(date=date,
+                                 title=i.title,
+                                 link=i.link))
+    return response
+
+
+def _get_temp_object(data):
+    return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
 
 
 async def _get_all_requests(line_quantity: int):
@@ -49,12 +101,9 @@ async def _get_all_requests(line_quantity: int):
     return response
 
 
-async def _get_search_response(request_id: int, line_quantity: int):
-    response = []
+async def _get_response_from_db(request_id: int, line_quantity: int):
     rq = await request_repository.RequestRepository.select(request_id, line_quantity)
-    for i in rq.items:
-        response.append(Response(date=i.creation_date.strftime('%d/%m/%Y-%H:%M:%S'), title=i.title, link=i.link))
-    return response
+    return _get_response(rq)
 
 
 async def _update_request(request, temp_object):

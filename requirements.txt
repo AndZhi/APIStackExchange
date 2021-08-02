@@ -3,3 +3,5 @@ Jinja2~=3.0.1
 psycopg2==2.9.1
 structlog~=21.1.0
 tortoise~=0.1.1
+aioredis~=2.0.0
+pytz~=2021.1

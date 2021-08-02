@@ -47,6 +47,17 @@ class LoggingConfig(Config):
         self.path = self._get_param('path')
 
 
+class RedisConfig(Config):
+    def __init__(self, section, parser):
+        super().__init__(section, parser)
+        self.host = self._get_param('host')
+        self.port = self._get_int_param('port')
+        self.db = self._get_int_param('db')
+        self.password = self._get_param('password')
+        self.socket_timeout = self._get_int_param('socket_timeout')
+        self.ttl_timeout = self._get_int_param('ttl_timeout')
+
+
 _app_config_path = os.path.join(os.path.dirname(__file__), '', 'app.config')
 _parser = configparser.ConfigParser(allow_no_value=True)
 _parser.optionxform = str
@@ -55,3 +66,4 @@ _parser.read(_app_config_path)
 default_config = DefaultConfig('DEFAULT', _parser)
 db_connection_config = DBConnectionConfig('DB_CONNECTION', _parser)
 log_config = LoggingConfig('LOGGING', _parser)
+redis_config = RedisConfig('REDIS', _parser)
