@@ -48,8 +48,8 @@
         <div class="inline_block">
             <div>Показать</div>
             <div>
-                <form id="line_quantity_form" name="line_quantity_form"  formmethod="post" action="/">
-                    <select id="line_quantity" name="line_quantity" required onChange="submit()">
+                <form>
+                    <select id="line_quantity" name="line_quantity" required onChange="this.form.submit()">
                         <option selected>Показать по...</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -73,10 +73,7 @@
                 <tr>
                     <td>{{ item.date }}</td>
                     <td>{{ item.title }}</td>
-                    <form action="/response">
-                        <input type="hidden" name="search" value="{{ item.title }}" >
-                        <td><button formmethod="post">Показать</button></td>
-                    </form>
+                    <td><a href={{ item.link }}>Просмотреть</a></td>
                 </tr>
                 {% endfor %}
             </tbody>

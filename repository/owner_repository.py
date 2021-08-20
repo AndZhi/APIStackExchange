@@ -1,21 +1,29 @@
+from pony.orm import db_session, flush
 from repository.base_repository import BaseRepository
 from app.models.models import Owner
 
 
 class OwnerRepository(BaseRepository):
     @staticmethod
-    async def insert(owner: Owner):
+    def insert(owner: Owner):
         if owner.id is None:
-            await owner.save()
+            with db_session:
+                owner
+                flush()
+                return owner.id
 
     @staticmethod
-    async def update(owner: Owner):
-        pass
+    def update(owner: Owner):
+        if owner.id is not None:
+            with db_session:
+                owner
 
     @staticmethod
-    async def select(owner_id: int):
-        pass
+    def select(owner_id: int):
+        return Owner.get(id=owner_id)
 
     @staticmethod
-    async def delete(owner_id: int):
-        pass
+    def delete(owner_id: int,):
+        with db_session:
+            owner = Owner.get(id=owner_id)
+            owner.delete()
