@@ -1,15 +1,16 @@
 from abc import abstractmethod, ABC
 import psycopg2
 from psycopg2 import sql, errors, errorcodes
+from tortoise.contrib.aiohttp import register_tortoise
+
 from config_manager import db_connection_config as configs
-from app.models.models import db
 
 
 class BaseRepository(ABC):
     @staticmethod
-    def db_init():
+    def db_init(app):
         BaseRepository._create_db()
-        BaseRepository._generate_mapping()
+        BaseRepository._generate_mapping(app)
 
     @staticmethod
     def _create_db():
@@ -21,34 +22,31 @@ class BaseRepository(ABC):
             con.autocommit = True
             cur = con.cursor()
             cur.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(configs.database)))
-        except psycopg2.errors.lookup(psycopg2.errorcodes.DUPLICATE_DATABASE) as e:
+        except psycopg2.errors.lookup(psycopg2.errorcodes.DUPLICATE_DATABASE):
             pass
         except Exception as e:
             raise e
 
     @staticmethod
-    def _generate_mapping():
-        db.bind(provider=configs.provider,
-                user=configs.user,
-                password=configs.password,
-                host=configs.host,
-                port=configs.port,
-                database=configs.database)
-
-        db.generate_mapping(create_tables=True)
+    def _generate_mapping(app):
+        register_tortoise(
+            app,
+            db_url=f'{configs.provider}://{configs.user}:{configs.password}@{configs.host}:{configs.port}/{configs.database}',
+            modules={'models': ['app.models.models']},
+            generate_schemas=True)
 
     @abstractmethod
-    def insert(self, obj):
+    async def insert(self, obj):
         pass
 
     @abstractmethod
-    def select(self, obj):
+    async def select(self, obj):
         pass
 
     @abstractmethod
-    def update(self, obj):
+    async def update(self, obj):
         pass
 
     @abstractmethod
-    def delete(self, obj):
+    async def delete(self, obj):
         pass

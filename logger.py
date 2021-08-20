@@ -9,7 +9,7 @@ from structlog import processors
 
 import config_manager
 
-_service_name = 'test-project'
+_service_name = 'API_Stack_Exchange'
 
 
 def _get_filename(filename):
@@ -124,21 +124,6 @@ def _add_exception_info(_, method_name, event_dict):
     return event_dict
 
 
-def _add_trace_info(_, __, event_dict):
-    # TODO добавить методы для получения транзакций в tracer и использовать его
-    from elasticapm.traces import execution_context
-
-    transaction = execution_context.get_transaction()
-    if transaction:
-        event_dict['transaction'] = {'id': transaction.id}
-    if transaction and transaction.trace_parent:
-        event_dict['trace'] = {'id': transaction.trace_parent.trace_id}
-    span = execution_context.get_span()
-    if span and span.id:
-        event_dict['span'] = {'id': span.id}
-    return event_dict
-
-
 def _get_struct_log_formatter():
     formatter_processors = [
         _add_timestamp,
@@ -148,8 +133,7 @@ def _get_struct_log_formatter():
         _add_process_info,
         _add_service_info,
         _add_host_info,
-        _add_exception_info,
-        _add_trace_info,
+        _add_exception_info
     ]
 
     formatter = structlog.stdlib.ProcessorFormatter(
@@ -160,9 +144,6 @@ def _get_struct_log_formatter():
 
 
 def _get_logger():
-    config_manager.apm_config and logging.getLogger('elasticapm').setLevel(logging.ERROR)
-    logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
-
     log_level = (logging.DEBUG if config_manager.default_config.debug else logging.INFO)
     when_mode = {'per_day': 'd', 'per_minute': 'm',
                  'per_hour': 'h', 'midnight': 'midnight'}

@@ -20,7 +20,7 @@ async def search(request):
 
 @aiohttp_jinja2.template("response.html")
 async def response(request):
-    data = request.query
+    data = await request.post()
     if data['search'] == '':
         return {'theme': data['search'], 'data': []}
     try:
@@ -28,4 +28,6 @@ async def response(request):
     except Exception:
         line_quantity = 25
     list_items = await stack_exchange_service.search(search_string=data['search'], line_quantity=line_quantity)
+    if list_items is None:
+        list_items = []
     return {'theme': data['search'], 'data': list_items}

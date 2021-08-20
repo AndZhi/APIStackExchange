@@ -1,44 +1,32 @@
-from pony.orm import db_session, flush
 from repository.base_repository import BaseRepository
-from app.models.models import Request
+from app.models.models import Request, Item
+from tortoise.query_utils import Prefetch
 
 
 class RequestRepository(BaseRepository):
     @staticmethod
-    def insert(request: Request):
+    async def insert(request: Request):
         if request.id is None:
-            with db_session:
-                request
-                flush()
-                return request.id
+            await request.save()
 
     @staticmethod
-    def update(request: Request):
+    async def update(request: Request):
         if request.id is not None:
-            with db_session:
-                request
+            await request.save()
 
     @staticmethod
-    def select(request_id: int):
-        return Request.get(id=request_id)
+    async def select(request_id: int, line_quantity: int):
+        return await Request.filter(id=request_id).prefetch_related(
+            Prefetch('items', queryset=Item.all().order_by('-creation_date').limit(line_quantity))).first()
 
     @staticmethod
-    def delete(request_id: int):
-        with db_session:
-            request = Request.get(id=request_id)
-            request.delete()
+    async def delete(request):
+        await request.delete()
 
     @staticmethod
-    def check_request(search_string: str):
-        with db_session:
-            requests = list(Request.select(lambda r: r.request_string.lower() == search_string.lower()))
-            if requests:
-                return requests[0].id
-            else:
-                return None
+    async def check_request(search_string: str):
+        return await Request.filter(request_string=search_string.lower()).first().prefetch_related('items')
 
     @staticmethod
-    def get_all_request():
-        with db_session:
-            requests = list(Request.select(lambda x: x))
-            return requests
+    async def get_all_request(line_quantity: int):
+        return await Request.all().order_by('-date').limit(line_quantity)
