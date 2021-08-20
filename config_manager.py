@@ -25,6 +25,8 @@ class DefaultConfig(Config):
         super().__init__(section, parser)
         self.debug = self._get_boolean_param('debug')
         self.port = self._get_int_param('port')
+        self.db_background_handler_on = self._get_boolean_param('db_background_handler_on')
+        self.db_background_handler_timeout = self._get_int_param('db_background_handler_timeout')
 
 
 class DBConnectionConfig(Config):

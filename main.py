@@ -1,9 +1,10 @@
-from aiohttp import web
 import jinja2
 import aiohttp_jinja2
-from repository.base_repository import BaseRepository
+
+from aiohttp import web
 from logger import logger
 from config_manager import default_config
+from repository.base_repository import BaseRepository
 
 
 def setup_routes(application):
@@ -21,7 +22,6 @@ def setup_app(application):
 
 
 app = web.Application()
-
 
 if __name__ == "__main__":
     port = default_config.port

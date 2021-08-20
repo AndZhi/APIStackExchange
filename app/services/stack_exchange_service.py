@@ -1,15 +1,16 @@
+import asyncio
 import json
-from datetime import datetime
-from datetime import timedelta
-from types import SimpleNamespace
 import pytz
-
+import sys
 import aioredis
 
-from app.models.models import Request, Item, Owner, Tag, Response
-from app.search import client
-from config_manager import redis_config
 from logger import logger
+from datetime import datetime
+from app.search import client
+from datetime import timedelta
+from types import SimpleNamespace
+from config_manager import redis_config, default_config
+from app.models.models import Request, Item, Owner, Tag, Response
 from repository import request_repository, owner_repository, item_repository, tag_repository
 
 
@@ -29,11 +30,71 @@ async def get_requests(**kwargs):
     return await _get_all_requests(int(kwargs['line_quantity']))
 
 
+async def background_handler(search_string: str):
+    logger.debug(f'Запущена фоновая обработка поискового запроса по строке "{search_string}"')
+
+    data_json = await client.search(search_string)
+    await red.setex(search_string.lower(),
+                    timedelta(minutes=redis_config.ttl_timeout),
+                    json.dumps(data_json))
+
+    temp_object = None
+    try:
+        temp_object = _get_temp_object(data_json)
+    except Exception as e:
+        logger.error(e)
+
+    try:
+        request = await _check_request(search_string)
+        if request is not None:
+            await _update_request(request, temp_object)
+        else:
+            request = Request(request_string=search_string.lower(), date=datetime.now(pytz.utc))
+            await request_repository.RequestRepository.insert(request)
+            if temp_object.items is not None:
+                for i in temp_object.items:
+                    await _create_item(request, i)
+        logger.debug('Данные получены и записаны в базу.')
+    except Exception as e:
+        logger.error(e)
+
+
+async def db_background_handler():
+
+    # Отложенный запуск.
+    await asyncio.sleep(1)
+
+    flag = True
+    while flag:
+        try:
+            logger.debug('Запущено фоновое обновление запросов из базы данных.')
+
+            requests = await get_requests(line_quantity=sys.maxsize)
+
+            for r in requests:
+                loop = asyncio.get_event_loop()
+                loop.create_task(background_handler(r.title))
+
+                # Если не ждать, то можно нарваться на блокировки со стороны внешнего API.
+                await asyncio.sleep(1)
+
+            logger.debug('Завершено фоновое обновление запросов из базы данных.')
+        except Exception as ex:
+            logger.error('Аварийно завершена работа фонового обновления запросов из базы данных! ', ex)
+        finally:
+            await asyncio.sleep(default_config.db_background_handler_timeout)
+
+if default_config.db_background_handler_on:
+    loop = asyncio.get_event_loop()
+    loop.create_task(db_background_handler())
+
+
 async def search(**kwargs):
     search_string = kwargs['search_string'].lower()
     line_quantity = int(kwargs['line_quantity'])
     logger.info(f'search_string: {search_string}')
     response = []
+    data = None
     try:
         if await red.exists(search_string) == 1:
             data = _get_temp_object(json.loads(await red.get(search_string)))
@@ -43,40 +104,23 @@ async def search(**kwargs):
     if len(response) != 0:
         return response[:line_quantity]
 
-    data_json = await client.search(search_string)
-    await red.setex(search_string.lower(),
-                    timedelta(minutes=redis_config.ttl_timeout),
-                    json.dumps(data_json))
-    temp_object = None
-    try:
-        temp_object = _get_temp_object(data_json)
-    except Exception as e:
-        logger.error(e)
-    request = None
-    try:
-        request = await _check_request(search_string)
-        if request is not None:
-            await _update_request(request, temp_object)
-        else:
-            request = Request(request_string=search_string.lower(), date=datetime.now(pytz.utc))
-            await request_repository.RequestRepository.insert(request)
-            for i in temp_object.items:
-                await _create_item(request, i)
-        logger.info('Данные получены и записаны в базу.')
-    except Exception as e:
-        logger.error(e)
-    try:
-        response = await _get_response_from_db(request.id, line_quantity)
-    except Exception as e:
-        logger.error(e)
+    loop = asyncio.get_event_loop()
+    loop.create_task(background_handler(search_string))
 
-    if len(response) != 0:
-        return response[:line_quantity]
+    response = _get_response(data)
+
+    return response[:line_quantity]
 
 
 def _get_response(data):
     response = []
     date = None
+    if data is None:
+        response.append(Response(date=datetime.now().strftime('%d/%m/%Y-%H:%M:%S'),
+                                 title='Ваш запрос обрабатывается, пожалуйста обновите страничку... ',
+                                 link=''))
+        return response
+
     for i in data.items:
         if isinstance(i.creation_date, int):
             date = datetime.utcfromtimestamp(i.creation_date).strftime('%d/%m/%Y-%H:%M:%S')
