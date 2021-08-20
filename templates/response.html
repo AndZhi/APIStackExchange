@@ -37,55 +37,53 @@
 </script>
 </head>
 <body>
-    <div class="board">
-        <div class="box">
-            <div class="name_page">Запрос на тему "{{theme}}"</div>
-            <div>
-                <form action="/search">
-                    <button>Новый запрос</button>
-                </form>
-            </div>
-            <div>
-                <form action="/">
-                    <button>Все запросы</button>
-                </form>
-            </div>
-            <div class="inline_block">
-                <div>
-                    <form id="line_quantity_form" name="line_quantity_form"  action="/response">
-                        <input type="hidden" name="search" value="{{theme}}">
-                        <select id="line_quantity" name="line_quantity" required>
-                            <option selected value="25">25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                    </form>
-                </div>
-                <div>
-                    <button form="line_quantity_form" type="submit" formmethod="post">Обновить</button>
-                </div>
-            </div>
+<div class="board">
+    <div class="box">
+        <div class="name_page">Запрос на тему "{{theme}}"</div>
+        <div>
+            <form action="/search">
+                <button>Новый запрос</button>
+            </form>
         </div>
-        <div class="table">
-            <table id="table">
-                <thead>
-                    <tr>
-                       <th>Дата/Время запроса</th>
-                       <th>Запрос</th>
-                       <th>Ссылка</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in data %}
-                    <tr>
-                        <td>{{ item.date }}</td>
-                        <td>{{ item.title }}</td>
-                        <td><a href={{ item.link }}>Просмотреть</a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div>
+            <form action="/">
+                <button>Все запросы</button>
+            </form>
+        </div>
+        <div class="inline_block">
+            <div>
+                <form id="search_form" action="/response">
+                    <input type="hidden" name="search" value="{{theme}}">
+                    <select id="line_quantity" name="line_quantity" required onChange="this.form.submit()">
+                        <option selected>Показать по...</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </form>
+            </div>
         </div>
     </div>
+    <div class="table">
+        <table id="table">
+            <thead>
+                <tr>
+                   <th>Дата/Время запроса</th>
+                   <th>Запрос</th>
+                   <th>Ссылка</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data %}
+                <tr>
+                    <td>{{ item.date }}</td>
+                    <td>{{ item.title }}</td>
+                    <td><a href={{ item.link }}>Просмотреть</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 </body>
 </html>

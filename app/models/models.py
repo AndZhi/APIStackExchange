@@ -1,64 +1,52 @@
 from datetime import datetime
-from tortoise import Model, fields
+from pony.orm import *
 
 
-class Request(Model):
-    id = fields.IntField(pk=True)
-    date = fields.DatetimeField(null=True)
-    request_string = fields.CharField(max_length=255, unique=True, index=True)
-
-    items: fields.ReverseRelation['Item']
-
-    def __str__(self):
-        return self.name
+db = Database()
 
 
-class Item(Model):
-    id = fields.IntField(pk=True)
-    is_answered = fields.BooleanField()
-    view_count = fields.IntField()
-    answer_count = fields.IntField()
-    score = fields.IntField()
-    last_activity_date = fields.DatetimeField(null=True)
-    creation_date = fields.DatetimeField(null=True)
-    last_edit_date = fields.DatetimeField(null=True)
-    question_id = fields.IntField()
-    content_license = fields.TextField(null=True)
-    link = fields.TextField(null=True)
-    title = fields.TextField(null=True)
-    request = fields.ForeignKeyField('models.Request', related_name='items')
-    owner = fields.ForeignKeyField('models.Owner', related_name='items')
-
-    tags: fields.ReverseRelation['Tag']
-
-    def __str__(self):
-        return self.name
+class Item(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    request = Required('Request')
+    is_answered = Optional(bool)
+    view_count = Optional(int)
+    answer_count = Optional(int)
+    score = Optional(int)
+    last_activity_date = Optional(datetime)
+    creation_date = Optional(datetime)
+    last_edit_date = Optional(datetime)
+    question_id = Optional(int)
+    content_license = Optional(str, nullable=True)
+    link = Optional(str, nullable=True)
+    title = Optional(str, nullable=True)
+    tags = Set('Tag')
+    owners = Set('Owner')
 
 
-class Owner(Model):
-    id = fields.IntField(pk=True)
-    account_id = fields.IntField(null=True)
-    reputation = fields.IntField(null=True)
-    user_id = fields.IntField(null=True)
-    user_type = fields.TextField(null=True)
-    accept_rate = fields.IntField(null=True)
-    profile_image = fields.TextField(null=True)
-    display_name = fields.TextField(null=True)
-    link = fields.TextField(null=True)
-
-    items: fields.ReverseRelation['Item']
-
-    def __str__(self):
-        return self.name
+class Owner(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    account_id = Optional(int)
+    reputation = Optional(int)
+    user_id = Optional(int)
+    user_type = Optional(str, nullable=True)
+    accept_rate = Optional(int)
+    profile_image = Optional(str, nullable=True)
+    display_name = Optional(str, nullable=True)
+    link = Optional(str, nullable=True)
+    item = Required(Item)
 
 
-class Tag(Model):
-    id = fields.IntField(pk=True)
-    value = fields.TextField(null=True)
-    item = fields.ForeignKeyField('models.Item', related_name='tags')
+class Tag(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    value = Optional(str, nullable=True)
+    item = Required(Item)
 
-    def __str__(self):
-        return self.name
+
+class Request(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    date = Required(datetime)
+    request_string = Required(str, unique=True, index='i_request_request_string')
+    items = Set(Item)
 
 
 class Response(object):
